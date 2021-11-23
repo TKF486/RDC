@@ -12,8 +12,7 @@ namespace Test
     class progam
     {
         static void Main(string[] args)
-        {             
-            //testing
+        {   
                 Semaphore gate = new Semaphore(2,2);
                 Semaphore writeGate = new Semaphore(1,1);
                 
