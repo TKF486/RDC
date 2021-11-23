@@ -1,218 +1,191 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Windows.Automation;
-using System.Diagnostics;
+using System.Windows.Forms;
 using System.Threading;
-using System.Threading.Tasks;
-using System.IO;
+using System.Timers;
+using Timer = System.Timers.Timer;
 
-namespace Test
+
+class Program
 {
-    class progam
+    static int Main(string[] args)
     {
-        static void Main(string[] args)
-        {   
-                Semaphore gate = new Semaphore(2,2);
-                Semaphore writeGate = new Semaphore(1,1);
-                
-                Dictionary<string, string> dictionary = getConfig();
-                //continue loop through the process every 5s
-                while (true)
-                {
-                    //program alive counter, check if the program is open
-                    //int counter = 0;
-                    //get all processes
-                    Process[] processlist = Process.GetProcesses();
+        Console.WriteLine("Enter \'q\' to quit the sample.");
 
-                
-                Parallel.ForEach(dictionary, rdc =>
-                {
+        // Create a timer with a ten second interval.
+        Timer aTimer = new Timer(10000);
+        // Hook up the Elapsed event for the timer. 
+        aTimer.Elapsed += StartThreads;
+        aTimer.AutoReset = true;
+        aTimer.Enabled = true;
 
-                        //gate.WaitOne();
-         
-                        Console.WriteLine("Checking for:{0} ...", rdc.Key);
-                        int counter = 0;
-                        foreach (Process process in processlist)
-
-                        {
-                           
-                            if (!String.IsNullOrEmpty(process.MainWindowTitle))
-                            {
-                                //Console.WriteLine("ID: {0} = Name: {1}", process.Id, process.MainWindowTitle);
-
-                                if (process.MainWindowTitle == rdc.Key)
-                                {
-                                    counter++;
-                                    //Console.WriteLine("Window:{0} is not opened!!", rdc.Key);  
-                                }
-                                else
-                                {
-                                    //Console.WriteLine("no found!!");
-                                }
-
-
-
-                                //check if RDC is opened
-
-
-                            }
-
-                        }
-
-                        if (counter == 1)
-                        {
-                            Console.WriteLine("Window:{0} is already opened!!", rdc.Key);
-                        }
-                        else
-                        {
-                            Thread.Sleep(2000);
-                            Console.WriteLine("Window:{0} is not opened!!", rdc.Key);
-                            startProgram();
-                            Thread.Sleep(2000);
-                        gate.WaitOne();
-
-                        writeLine(rdc.Value, ref writeGate, ref gate, rdc.Key);
-                            Thread.Sleep(5000);
-                            clickFButton("Connect", rdc.Key);
-                            Thread.Sleep(2000);
-                            clickFButton("Yes", rdc.Key);
-                        }
-
-                        gate.Release();
-                    Thread.Sleep(3000);
-                });
-
-
-
-                //sleep 5s
-                Thread.Sleep(3000);
-
-                }
-
-                /////////////////////////////////
-            }
-
-
-
-
-
-
-            //start the RDC prgram
-            public static void startProgram()
+        //Quit Sample
+        while (Console.Read() == 'q')
         {
-            Process firstApp = new Process();
-
-            try
-            {
-                firstApp.StartInfo.FileName = "mstsc.exe";
-                firstApp.Start();
-                //Console.WriteLine("ID: {0} = Name: {1}", firstApp.Id, firstApp.ProcessName);
-                //firstApp.WaitForExit();
-
-
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
+            return -1;
         }
 
-        public static void writeLine(String rdcIP, ref Semaphore writeGate, ref Semaphore gate, string key)
+        Console.ReadLine();
+        aTimer.Stop();
+        aTimer.Dispose();
+
+        return 0;
+    }
+
+    public static void StartThreads(object o, ElapsedEventArgs e)
+    {
+        string RDCWindowsName = "Remote Desktop Connection";
+        string NotepadWindowsName = "Untitled - Notepad";
+        AutomationElement rootElement = AutomationElement.RootElement;
+        var th = new Thread(() => GetRDCWindows(RDCWindowsName, rootElement));
+        var th2 = new Thread(() => GetNotepadWindows(NotepadWindowsName, rootElement));
+        th.Start();
+        th2.Start();
+    }
+
+    private static void GetNotepadWindows(string NotepadWindowsName, AutomationElement rootElement)
+    {
+        try
         {
-            try
+            //Retrieves a collection of all the immediate children of the desktop.
+            AutomationElement NotepadElement = null;
+            AutomationElementCollection winCollection = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
+            bool NotepadOn = false;
+            int iter = 1;
+
+            foreach (AutomationElement element in winCollection)
             {
-                //gate.WaitOne();
-                writeGate.WaitOne();
-                //Console.WriteLine(writeGate);
-               
-                var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
-                if (notepad != null)
+                String elementName = element.Current.Name;
+                if (elementName.Contains(NotepadWindowsName))
                 {
-                    var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
-                    var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName == "Edit"
-                                                    ).FirstOrDefault();
-                    if (element != null)
-                    {
-                        if (element.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                        {
-                            ((ValuePattern)pattern).SetValue(rdcIP);
-                            Console.WriteLine("Program{0}: WriteLine succeed!!", key);
-                            writeGate.Release();
-                        }
-                        else
-                        {
-                            Console.WriteLine("Cannot found!!");
-                        }
-                    }
+                    NotepadOn = true;
+                    NotepadElement = element;
                 }
+                iter++;
             }
 
-            catch (Exception ex)
+            //Open RDC if it is not opened
+            if (NotepadOn == false)
             {
-                Console.WriteLine("Program{0}: WriteLine fail", key);
+                System.Diagnostics.Process.Start("notepad.exe");
+                Thread.Sleep(2000);
+                var Notepad = System.Diagnostics.Process.GetProcessesByName("notepad").FirstOrDefault();
+                NotepadElement = AutomationElement.FromHandle(Notepad.MainWindowHandle)
+                                .FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                .Cast<AutomationElement>()
+                                .Where(x => x.Current.ClassName == "Edit")
+                                .FirstOrDefault();
+                EnterValue(NotepadElement);
+            }
+            else
+            {
+                EnterValue(NotepadElement);
             }
         }
-
-        public static void clickFButton(String y, string key)
+        catch (ElementNotAvailableException)
         {
-            try
-            {
-                var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
-                if (notepad != null)
-                {
-                    var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
-                    var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName == "Button" &&
-                                        x.Current.Name == y
-                                                    ).FirstOrDefault();
-                    if (element != null)
-                    {
-                        InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
-                        invokePattern?.Invoke();
-                        Console.WriteLine("Program{0}: Press Button succeed!!", key);
-                    }
-                    else
-                    {
-
-                    }
-
-                }
-            }
-
-            catch (Exception ex)
-            {
-                Console.WriteLine("Program{0}: Press button fail", key);
-            }
-
-
-
-
 
         }
+    }
 
-  
 
-        public static Dictionary<string, string> getConfig()
+    //Function to find RDC Windows
+    private static void GetRDCWindows(string RDCWindowsName, AutomationElement rootElement)
+    {
+        try
         {
-            Dictionary<string, string> dictionary = new Dictionary<string, string>();
-            using (var reader = new StreamReader("windowList.txt"))
+            //Retrieves a collection of all the immediate children of the desktop.
+            AutomationElement RDCElement = null;
+            AutomationElementCollection winCollection = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
+            bool RDCOn = false;
+            int iter = 1;
+
+            foreach (AutomationElement element in winCollection)
             {
-                while (!reader.EndOfStream)
+                String elementName = element.Current.Name;
+                if (elementName.Contains(RDCWindowsName))
                 {
-                    var line = reader.ReadLine();
-                    if (line == null) continue;
-                    var values = line.Split(';');
-                    dictionary.Add(values[0], values[1]);
+                    RDCOn = true;
+                    RDCElement = element;
                 }
+                iter++;
             }
 
-            return dictionary;
+            //Open RDC if it is not opened
+            if (RDCOn == false)
+            {
+                System.Diagnostics.Process.Start("mstsc.exe");
+                Thread.Sleep(2000);
+                var RDC = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
+                RDCElement = AutomationElement.FromHandle(RDC.MainWindowHandle)
+                                .FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                .Cast<AutomationElement>()
+                                .Where(x => x.Current.ClassName == "Edit")
+                                .FirstOrDefault();
+                EnterValue(RDCElement);
+            }
+            else
+            {
+                EnterValue(RDCElement);
+            }
+        }
+        catch (ElementNotAvailableException)
+        {
 
         }
+    }
 
+    private static void EnterValue(AutomationElement element)
+    {
+        try
+        {
+            AutomationElement TextboxElement = element.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                            .Cast<AutomationElement>()
+                                            .Where(x => x.Current.ClassName == "Edit")
+                                            .FirstOrDefault();
+            if (TextboxElement != null)
+            {
+                if (TextboxElement.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                {
+                    ((ValuePattern)pattern).SetValue("Something!");
+                }
+                else
+                {
+                    TextboxElement.SetFocus();
+                    SendKeys.SendWait("^{HOME}");   // Move to start of control
+                    SendKeys.SendWait("^+{END}");   // Select everything
+                    SendKeys.SendWait("{DEL}");     // Delete selection
+                    SendKeys.SendWait("Something!");
+
+                    // OR 
+                    // SendMessage(element.Current.NativeWindowHandle, WM_SETTEXT, 0, "Something!");
+                }
+            }
+        }
+        catch (ElementNotAvailableException)
+        {
+
+        }
+    }
+
+    private static void ClickConnectButton(AutomationElement RDCElement)
+    {
+        try
+        {
+            AutomationElement ButtonElement = RDCElement.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                            .Cast<AutomationElement>()
+                                            .Where(x => x.Current.ClassName == "Button" && x.Current.Name == "Connect")
+                                            .FirstOrDefault();
+
+            InvokePattern invokePattern = ButtonElement.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
+            invokePattern?.Invoke();
+        }
+        catch (ElementNotAvailableException)
+        {
+
+        }
     }
 }
