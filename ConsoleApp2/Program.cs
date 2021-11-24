@@ -19,19 +19,11 @@ class Program
     {
         dictionary = getConfig();
         processList = Process.GetProcesses();
-
-        // Create a timer with a ten second interval.
-        Timer aTimer = new Timer(10000);
-        // Hook up the Elapsed event for the timer. 
-        aTimer.Elapsed += StartTimer;
-        aTimer.AutoReset = true;
-        aTimer.Enabled = true;
-    }
-
-    public static void StartTimer(object o, ElapsedEventArgs e)
-    {
         GetRDCWindows(dictionary, processList);
+
+
     }
+
 
     //get RDC windows
     public static void GetRDCWindows(Dictionary<string, string> dictionary, Process[] processlist)
@@ -79,13 +71,39 @@ class Program
                                     .FindAll(TreeScope.Subtree, Condition.TrueCondition)
                                         .Cast<AutomationElement>()
                                         .Where(x => x.Current.ClassName=="Button"&&
-                                        (x.Current.Name=="Connect")||(x.Current.Name=="Yes")).FirstOrDefault();
+                                        (x.Current.Name=="Connect")).FirstOrDefault();
+                    AutomationElement RDCElement3 = AutomationElement.FromHandle(RDC.MainWindowHandle)
+                                    .FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                        .Cast<AutomationElement>()
+                                        .Where(x => x.Current.ClassName=="Button"&&
+                                      (x.Current.Name=="Yes")).FirstOrDefault();
 
+                    Thread.Sleep(5000);
+                    if (RDCElement1!=null)
+                    {
+                        Console.WriteLine("textbox exists = " );
+                        EnterValue(RDCElement1, rdc.Value, rdc.Key);
+                    }
+                    else
+                    {
+                        Console.WriteLine("text not exists");
+                    }
+         
                     Thread.Sleep(2000);
-                    EnterValue(RDCElement1, rdc.Value, rdc.Key);
-                    //clickFButton("Connect");
-                    Thread.Sleep(2000);
-                    // clickFButton("Yes");
+                    if (RDCElement2!=null)
+                    {
+                        Console.WriteLine("connect btn exists = ");
+                        Thread.Sleep(2000);
+                        ClickConnectButton(RDCElement2, rdc.Key);
+                    }
+                    else
+                    {
+                        Console.WriteLine("connect btn not exists");
+                    }
+
+                   
+            
+                   
 
 
                 }
@@ -94,7 +112,7 @@ class Program
         }
         catch (Exception ex)
         {
-
+            Console.WriteLine(ex);
         }
     }
 
@@ -132,33 +150,60 @@ class Program
                 Console.WriteLine("Window:{0} write fail!!", rdckey);
             }
         }
+        catch (ElementNotAvailableException e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private static void ClickConnectButton(AutomationElement RDCElement, string key)
+    {
+        try
+        {
+            AutomationElement ButtonElement = RDCElement.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                        .Cast<AutomationElement>()
+                                        .Where(x => x.Current.ClassName=="Button"&&
+                                        (x.Current.Name=="Connect")).FirstOrDefault();           
+            if(ButtonElement !=null)
+            {
+                InvokePattern invokePattern = ButtonElement.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
+                invokePattern?.Invoke();
+                Console.WriteLine("Window:{0} press Connect button success!!", key);
+            }
+            else
+            {
+                Console.WriteLine("Window:{0} press Connect button fail!!", key);
+            }
+            
+        }
         catch (ElementNotAvailableException)
         {
 
         }
     }
 
-    public static void clickFButton(String y)
+    private static void ClickYesButton(AutomationElement RDCElement, string key)
     {
-
-        var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
-        if (notepad!=null)
+        try
         {
-            var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
-            var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                .Cast<AutomationElement>()
-                                .Where(x => x.Current.ClassName=="Button"&&
-                                x.Current.Name==y
-                                            ).FirstOrDefault();
-            if (element!=null)
+            AutomationElement ButtonElement = RDCElement.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                        .Cast<AutomationElement>()
+                                        .Where(x => x.Current.ClassName=="Button"&&
+                                        (x.Current.Name=="Yes")).FirstOrDefault();
+            if (ButtonElement!=null)
             {
-                InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
+                InvokePattern invokePattern = ButtonElement.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
                 invokePattern?.Invoke();
+                Console.WriteLine("Window:{0} press Yes button success!!", key);
             }
             else
             {
-
+                Console.WriteLine("Window:{0} press Yes button fail!!", key);
             }
+
+        }
+        catch (ElementNotAvailableException)
+        {
 
         }
     }
