@@ -13,93 +13,73 @@ namespace Test
     {
         static void Main(string[] args)
         {   
-                Semaphore gate = new Semaphore(2,2);
-                Semaphore writeGate = new Semaphore(1,1);
+            Semaphore gate = new Semaphore(2,2);
+            Semaphore writeGate = new Semaphore(1,1);
                 
-                Dictionary<string, string> dictionary = getConfig();
-                //continue loop through the process every 5s
-                while (true)
-                {
-                    //program alive counter, check if the program is open
-                    //int counter = 0;
-                    //get all processes
-                    Process[] processlist = Process.GetProcesses();
+            Dictionary<string, string> dictionary = getConfig();
+            //continue loop through the process every 5s
+            while (true)
+            {
+                //program alive counter, check if the program is open
+                //int counter = 0;
+                //get all processes
+                Process[] processlist = Process.GetProcesses();
 
                 
-                Parallel.ForEach(dictionary, rdc =>
-                {
-
-                        //gate.WaitOne();
-         
-                        Console.WriteLine("Checking for:{0} ...", rdc.Key);
-                        int counter = 0;
-                        foreach (Process process in processlist)
-
+            Parallel.ForEach(dictionary, rdc =>
+            {
+                //gate.WaitOne();         
+                Console.WriteLine("Checking for:{0} ...", rdc.Key);
+                int counter = 0;
+                foreach (Process process in processlist)
+                {                           
+                    if (!String.IsNullOrEmpty(process.MainWindowTitle))
+                    {
+                        //Console.WriteLine("ID: {0} = Name: {1}", process.Id, process.MainWindowTitle);
+                        if (process.MainWindowTitle == rdc.Key)
                         {
-                           
-                            if (!String.IsNullOrEmpty(process.MainWindowTitle))
-                            {
-                                //Console.WriteLine("ID: {0} = Name: {1}", process.Id, process.MainWindowTitle);
-
-                                if (process.MainWindowTitle == rdc.Key)
-                                {
-                                    counter++;
-                                    //Console.WriteLine("Window:{0} is not opened!!", rdc.Key);  
-                                }
-                                else
-                                {
-                                    //Console.WriteLine("no found!!");
-                                }
-
-
-
-                                //check if RDC is opened
-
-
-                            }
-
-                        }
-
-                        if (counter == 1)
-                        {
-                            Console.WriteLine("Window:{0} is already opened!!", rdc.Key);
+                            counter++;
+                            //Console.WriteLine("Window:{0} is not opened!!", rdc.Key);  
                         }
                         else
                         {
-                            Thread.Sleep(2000);
-                            Console.WriteLine("Window:{0} is not opened!!", rdc.Key);
-                            startProgram();
-                            Thread.Sleep(2000);
-                        gate.WaitOne();
-
-                        writeLine(rdc.Value, ref writeGate, ref gate, rdc.Key);
-                            Thread.Sleep(5000);
-                            clickFButton("Connect", rdc.Key);
-                            Thread.Sleep(2000);
-                            clickFButton("Yes", rdc.Key);
+                            //Console.WriteLine("no found!!");
                         }
-
-                        gate.Release();
-                    Thread.Sleep(3000);
-                });
-
-
-
-                //sleep 5s
-                Thread.Sleep(3000);
-
+                        //check if RDC is opened
+                    }
                 }
 
-                /////////////////////////////////
-            }
+                if (counter == 1)
+                {
+                    Console.WriteLine("Window:{0} is already opened!!", rdc.Key);
+                }
+                else
+                {
+                    Thread.Sleep(2000);
+                    Console.WriteLine("Window:{0} is not opened!!", rdc.Key);
+                    startProgram();
+                    Thread.Sleep(2000);
+                    gate.WaitOne();
 
+                    writeLine(rdc.Value, ref writeGate, ref gate, rdc.Key);
+                    Thread.Sleep(5000);
+                    clickFButton("Connect", rdc.Key);
+                    Thread.Sleep(2000);
+                    clickFButton("Yes", rdc.Key);
+                }
 
+                gate.Release();
+                Thread.Sleep(3000);
+            });
 
+            //sleep 5s
+            Thread.Sleep(3000);
 
-
+            }                /////////////////////////////////
+        }
 
             //start the RDC prgram
-            public static void startProgram()
+        public static void startProgram()
         {
             Process firstApp = new Process();
 
@@ -187,11 +167,6 @@ namespace Test
             {
                 Console.WriteLine("Program{0}: Press button fail", key);
             }
-
-
-
-
-
         }
 
   
