@@ -12,11 +12,25 @@ using System.Diagnostics;
 
 class Program
 {
+    public static Dictionary<string, string> dictionary;
+    public static Process[] processList;
+
     static void Main(string[] args)
     {
-        Dictionary<string, string> dictionary = getConfig();
-        Process[] processlist = Process.GetProcesses();
-        GetRDCWindows(dictionary, processlist);
+        dictionary = getConfig();
+        processList = Process.GetProcesses();
+
+        // Create a timer with a ten second interval.
+        Timer aTimer = new Timer(10000);
+        // Hook up the Elapsed event for the timer. 
+        aTimer.Elapsed += StartTimer;
+        aTimer.AutoReset = true;
+        aTimer.Enabled = true;
+    }
+
+    public static void StartTimer(object o, ElapsedEventArgs e)
+    {
+        GetRDCWindows(dictionary, processList);
     }
 
     //get RDC windows
@@ -72,9 +86,6 @@ class Program
                 }
                 Thread.Sleep(5000);
             }
-
-
-            Thread.Sleep(10000);
         }
         catch (Exception ex)
         {
