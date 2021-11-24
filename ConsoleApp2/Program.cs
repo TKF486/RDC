@@ -65,10 +65,15 @@ class Program
                                     .FindAll(TreeScope.Subtree, Condition.TrueCondition)
                                         .Cast<AutomationElement>()
                                         .Where(x => x.Current.ClassName=="Button"&&
-                                        (x.Current.Name=="Connect") ||(x.Current.Name=="Yes")).FirstOrDefault();
+                                        (x.Current.Name=="Connect")||(x.Current.Name=="Yes")).FirstOrDefault();
 
+                    Thread.Sleep(2000);
                     EnterValue(RDCElement1, rdc.Value, rdc.Key);
-                    
+                    //clickFButton("Connect");
+                    Thread.Sleep(2000);
+                    // clickFButton("Yes");
+
+
                 }
                 Thread.Sleep(5000);
             }
@@ -95,7 +100,7 @@ class Program
                 if (TextboxElement.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
                 {
                     ((ValuePattern)pattern).SetValue(rdcIP);
-                    Console.WriteLine("Window:{0} write successful!!", rdckey);                   
+                    Console.WriteLine("Window:{0} write successful!!", rdckey);
 
                 }
                 else
@@ -110,6 +115,11 @@ class Program
                     // SendMessage(element.Current.NativeWindowHandle, WM_SETTEXT, 0, "Something!");
                 }
             }
+
+            else
+            {
+                Console.WriteLine("Window:{0} write fail!!", rdckey);
+            }
         }
         catch (ElementNotAvailableException)
         {
@@ -117,20 +127,27 @@ class Program
         }
     }
 
-    private static void ClickConnectButton(AutomationElement RDCElement1, String y)
+    public static void clickFButton(String y)
     {
-        try
-        {
-            AutomationElement ButtonElement = RDCElement1.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                            .Cast<AutomationElement>()
-                                            .Where(x => x.Current.ClassName=="Button"&&x.Current.Name=="y")
-                                            .FirstOrDefault();
 
-            InvokePattern invokePattern = ButtonElement.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
-            invokePattern?.Invoke();
-        }
-        catch (ElementNotAvailableException)
+        var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
+        if (notepad!=null)
         {
+            var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
+            var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                .Cast<AutomationElement>()
+                                .Where(x => x.Current.ClassName=="Button"&&
+                                x.Current.Name==y
+                                            ).FirstOrDefault();
+            if (element!=null)
+            {
+                InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
+                invokePattern?.Invoke();
+            }
+            else
+            {
+
+            }
 
         }
     }
