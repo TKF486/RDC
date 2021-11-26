@@ -35,23 +35,26 @@ class Program
         {
             foreach (KeyValuePair<string, string> rdc in dictionary)
             {
-                Process[] processlist = Process.GetProcesses();
+                String windowsName = "Remote Desktop Connection";
+                AutomationElement rootElement = AutomationElement.RootElement;
+                AutomationElement element = null;
+                AutomationElementCollection winCollection = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
+                
                 Console.WriteLine("Checking for:{0} ...", rdc.Key);
                 int counter = 0;
-                foreach (Process process in processlist)
+                foreach (AutomationElement elementIter in winCollection)
                 {
-                    if (!String.IsNullOrEmpty(process.MainWindowTitle))
-                    {
-                        if (process.MainWindowTitle==rdc.Key)
+                    String elementName = elementIter.Current.Name;                   
+                        if (elementName.Contains(rdc.Key))
                         {
                             counter++;
+                            break;
                         }
                         else
                         {
 
                         }
-                    }
-                }
+                }               
 
                 if (counter==1)
                 {
@@ -64,9 +67,30 @@ class Program
                     Console.WriteLine("Window:{0} Opening...", rdc.Key);
                     Process.Start("mstsc.exe");
                     Thread.Sleep(5000);
-                    var RDC = Process.GetProcessesByName("mstsc").FirstOrDefault();
-                    Thread.Sleep(5000);
-                    var RDCElement1 = AutomationElement.FromHandle(RDC.MainWindowHandle);
+                    AutomationElement rootElement2 = AutomationElement.RootElement;
+                    AutomationElementCollection winCollection2 = rootElement2.FindAll(TreeScope.Children, Condition.TrueCondition);
+                    AutomationElement mstscWin = null;
+                    foreach (AutomationElement elementIter2 in winCollection2)
+                    {
+                        String elementName = elementIter2.Current.Name;
+                        Console.WriteLine(elementName);
+                        if (elementName.Contains(windowsName))
+                        {
+                            mstscWin=elementIter2;
+                            Console.WriteLine("Success find mstsc!!");
+                            break;
+
+                        }
+
+                        else
+                        {
+
+                        }
+                      
+                    }
+                    //var RDC = Process.GetProcessesByName("mstsc").FirstOrDefault();
+                    //Thread.Sleep(5000);
+                    var RDCElement1 = mstscWin;
                     if(RDCElement1 == null)
                     {
                         Console.WriteLine("RDCElement1 is null!!");
@@ -101,9 +125,9 @@ class Program
                     {
                         Console.WriteLine("textbox exists = ");
                         EnterValue(RDCElement1d, rdc.Value, rdc.Key);
-                        clickFButton("Connect");
+                        clickFButton(RDCElement1, "Connect");
                         Thread.Sleep(2000);
-                        clickFButton("Yes");
+                        clickFButton(RDCElement1, "Yes");
                     }
                     else
                     {
@@ -162,14 +186,9 @@ class Program
         }
     }
 
-    public static void clickFButton(String y)
-    {
-
-        var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
-        if (notepad!=null)
-        {
-            var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
-            var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+    public static void clickFButton(AutomationElement rDCElement1, String y)
+    {                 
+            var element = rDCElement1.FindAll(TreeScope.Subtree, Condition.TrueCondition)
                                 .Cast<AutomationElement>()
                                 .Where(x => x.Current.ClassName=="Button"&&
                                 x.Current.Name==y
@@ -181,10 +200,10 @@ class Program
             }
             else
             {
-
+                Console.WriteLine("Cannot find button!!");
             }
         }
-    }
+    
 
     //read config from notepad
     public static Dictionary<string, string> getConfig()
