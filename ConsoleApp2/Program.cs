@@ -1,19 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Windows.Automation;
 using System.Windows.Forms;
 using System.Threading;
-using System.Timers;
 using System.IO;
-using Timer = System.Timers.Timer;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 class Program
 {
     public static Dictionary<string, string> dictionary;
-    //public static Process[] processList;
+
+    // Find Window 
+    [DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
+    static extern IntPtr FindWindowByCaption(IntPtr ZeroOnly, string lpWindowName);
+
+    // Activate an application window.
+    [DllImport("USER32.DLL")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
 
     static void Main(string[] args)
     {
@@ -24,9 +29,7 @@ class Program
             GetRDCWindows(dictionary);
             Thread.Sleep(3000);
         }
-
     }
-
 
     //get RDC windows
     public static void GetRDCWindows(Dictionary<string, string> dictionary)
@@ -208,24 +211,37 @@ class Program
 
     public static void clickOKButton(string key)
     {
-        AutomationElement rootElement = AutomationElement.RootElement;
-        AutomationElementCollection winCollection2 = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
-        AutomationElement targetWin = null;
-        foreach (AutomationElement elementIter in winCollection2)
+        //AutomationElement rootElement = AutomationElement.RootElement;
+        //AutomationElementCollection winCollection2 = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
+        //AutomationElement targetWin = null;
+        //foreach (AutomationElement elementIter in winCollection2)
+        //{
+        //    String elementName = elementIter.Current.Name;
+        //    //Console.WriteLine(elementName);
+        //    if (elementName.Contains(key))
+        //    {
+        //        Console.WriteLine();
+        //        Console.WriteLine("Success find the opend rdc: "+key);
+        //        targetWin=elementIter;
+        //        break;
+        //    }
+        //    else
+        //    {
+        //        //Console.WriteLine("fail to find the opend rdc!!");
+        //    }
+        //}
+
+        var hWnd = FindWindowByCaption(IntPtr.Zero, key);
+        if (hWnd==IntPtr.Zero)
         {
-            String elementName = elementIter.Current.Name;
-            //Console.WriteLine(elementName);
-            if (elementName.Contains(key))
-            {
-                Console.WriteLine();
-                Console.WriteLine("Success find the opend rdc: "+key);
-                targetWin=elementIter;
-                break;
-            }
-            else
-            {
-                //Console.WriteLine("fail to find the opend rdc!!");
-            }
+            Console.WriteLine("Cannot find window: "+key);
+
+        }
+        else
+        {
+            Console.WriteLine("success find window: "+key);
+            SetForegroundWindow(hWnd);
+            SendKeys.SendWait("{ENTER}");
         }
 
     }
