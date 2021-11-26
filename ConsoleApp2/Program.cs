@@ -13,26 +13,29 @@ using System.Diagnostics;
 class Program
 {
     public static Dictionary<string, string> dictionary;
-    public static Process[] processList;
+    //public static Process[] processList;
 
     static void Main(string[] args)
     {
-        dictionary = getConfig();
-        processList = Process.GetProcesses();
-        GetRDCWindows(dictionary, processList);
-
+        dictionary=getConfig();
+        //processList=Process.GetProcesses();
+        while (true)
+        {
+            GetRDCWindows(dictionary);
+            Thread.Sleep(3000); 
+        }     
 
     }
 
 
     //get RDC windows
-    public static void GetRDCWindows(Dictionary<string, string> dictionary, Process[] processlist)
+    public static void GetRDCWindows(Dictionary<string, string> dictionary)
     {
         try
         {
             foreach (KeyValuePair<string, string> rdc in dictionary)
-
             {
+                Process[] processlist = Process.GetProcesses();
                 Console.WriteLine("Checking for:{0} ...", rdc.Key);
                 int counter = 0;
                 foreach (Process process in processlist)
@@ -59,52 +62,55 @@ class Program
                     Thread.Sleep(2000);
                     Console.WriteLine("Window:{0} is not opened!!", rdc.Key);
                     Console.WriteLine("Window:{0} Opening...", rdc.Key);
-                    System.Diagnostics.Process.Start("mstsc.exe");
-                    Thread.Sleep(2000);
-                    var RDC = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
-                    AutomationElement RDCElement1 = AutomationElement.FromHandle(RDC.MainWindowHandle)
-                                    .FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                    .Cast<AutomationElement>()
-                                    .Where(x => x.Current.ClassName=="Edit")
-                                    .FirstOrDefault();
-                    AutomationElement RDCElement2 = AutomationElement.FromHandle(RDC.MainWindowHandle)
-                                    .FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName=="Button"&&
-                                        (x.Current.Name=="Connect")).FirstOrDefault();
-                    AutomationElement RDCElement3 = AutomationElement.FromHandle(RDC.MainWindowHandle)
-                                    .FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName=="Button"&&
-                                      (x.Current.Name=="Yes")).FirstOrDefault();
+                    Process.Start("mstsc.exe");
+                    Thread.Sleep(5000);
+                    var RDC = Process.GetProcessesByName("mstsc").FirstOrDefault();
+                    Thread.Sleep(5000);
+                    var RDCElement1 = AutomationElement.FromHandle(RDC.MainWindowHandle);
+                    if(RDCElement1 == null)
+                    {
+                        Console.WriteLine("RDCElement1 is null!!");
+                    }
+                    var RDCElement1a = RDCElement1.FindAll(TreeScope.Subtree, Condition.TrueCondition);
+                    if (RDCElement1a==null)
+                    {
+                        Console.WriteLine("RDCElement1a is null!!");
+                    }
+                    var RDCElement1b = RDCElement1a.Cast<AutomationElement>();
+                    if (RDCElement1b==null)
+                    {
+                        Console.WriteLine("RDCElementb1 is null!!");
+                    }
+                    //Thread.Sleep(5000);
+                    var RDCElement1c = RDCElement1b.Where(x => (x.Current.AutomationId=="5012"));
+                    if (RDCElement1c==null)
+                    {
+                        Console.WriteLine("RDCElement1c is null!!");
+                    }                   
+                    var RDCElement1d = RDCElement1c.FirstOrDefault();
+                    if (RDCElement1d==null)
+                    {
+                        Console.WriteLine("RDCElement1d is null!!");
+                    }
+
 
                     Thread.Sleep(5000);
-                    if (RDCElement1!=null)
+
+
+                    if (RDCElement1d!=null)
                     {
-                        Console.WriteLine("textbox exists = " );
-                        EnterValue(RDCElement1, rdc.Value, rdc.Key);
+                        Console.WriteLine("textbox exists = ");
+                        EnterValue(RDCElement1d, rdc.Value, rdc.Key);
+                        clickFButton("Connect");
+                        Thread.Sleep(2000);
+                        clickFButton("Yes");
                     }
                     else
                     {
                         Console.WriteLine("text not exists");
                     }
-         
+
                     Thread.Sleep(2000);
-                    if (RDCElement2!=null)
-                    {
-                        Console.WriteLine("connect btn exists = ");
-                        Thread.Sleep(2000);
-                        ClickConnectButton(RDCElement2, rdc.Key);
-                    }
-                    else
-                    {
-                        Console.WriteLine("connect btn not exists");
-                    }
-
-                   
-            
-                   
-
 
                 }
                 Thread.Sleep(5000);
@@ -156,55 +162,27 @@ class Program
         }
     }
 
-    private static void ClickConnectButton(AutomationElement RDCElement, string key)
+    public static void clickFButton(String y)
     {
-        try
+
+        var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
+        if (notepad!=null)
         {
-            AutomationElement ButtonElement = RDCElement.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName=="Button"&&
-                                        (x.Current.Name=="Connect")).FirstOrDefault();           
-            if(ButtonElement !=null)
+            var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
+            var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                .Cast<AutomationElement>()
+                                .Where(x => x.Current.ClassName=="Button"&&
+                                x.Current.Name==y
+                                            ).FirstOrDefault();
+            if (element!=null)
             {
-                InvokePattern invokePattern = ButtonElement.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
+                InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
                 invokePattern?.Invoke();
-                Console.WriteLine("Window:{0} press Connect button success!!", key);
             }
             else
             {
-                Console.WriteLine("Window:{0} press Connect button fail!!", key);
+
             }
-            
-        }
-        catch (ElementNotAvailableException)
-        {
-
-        }
-    }
-
-    private static void ClickYesButton(AutomationElement RDCElement, string key)
-    {
-        try
-        {
-            AutomationElement ButtonElement = RDCElement.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName=="Button"&&
-                                        (x.Current.Name=="Yes")).FirstOrDefault();
-            if (ButtonElement!=null)
-            {
-                InvokePattern invokePattern = ButtonElement.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
-                invokePattern?.Invoke();
-                Console.WriteLine("Window:{0} press Yes button success!!", key);
-            }
-            else
-            {
-                Console.WriteLine("Window:{0} press Yes button fail!!", key);
-            }
-
-        }
-        catch (ElementNotAvailableException)
-        {
-
         }
     }
 
