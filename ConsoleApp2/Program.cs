@@ -22,8 +22,8 @@ class Program
         while (true)
         {
             GetRDCWindows(dictionary);
-            Thread.Sleep(3000); 
-        }     
+            Thread.Sleep(3000);
+        }
 
     }
 
@@ -39,22 +39,22 @@ class Program
                 AutomationElement rootElement = AutomationElement.RootElement;
                 AutomationElement element = null;
                 AutomationElementCollection winCollection = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
-                
+
                 Console.WriteLine("Checking for:{0} ...", rdc.Key);
                 int counter = 0;
                 foreach (AutomationElement elementIter in winCollection)
                 {
-                    String elementName = elementIter.Current.Name;                   
-                        if (elementName.Contains(rdc.Key))
-                        {
-                            counter++;
-                            break;
-                        }
-                        else
-                        {
+                    String elementName = elementIter.Current.Name;
+                    if (elementName.Contains(rdc.Key))
+                    {
+                        counter++;
+                        break;
+                    }
+                    else
+                    {
 
-                        }
-                }               
+                    }
+                }
 
                 if (counter==1)
                 {
@@ -73,7 +73,7 @@ class Program
                     foreach (AutomationElement elementIter2 in winCollection2)
                     {
                         String elementName = elementIter2.Current.Name;
-                        Console.WriteLine(elementName);
+                        //Console.WriteLine(elementName);
                         if (elementName.Contains(windowsName))
                         {
                             mstscWin=elementIter2;
@@ -86,12 +86,12 @@ class Program
                         {
 
                         }
-                      
+
                     }
                     //var RDC = Process.GetProcessesByName("mstsc").FirstOrDefault();
                     //Thread.Sleep(5000);
                     var RDCElement1 = mstscWin;
-                    if(RDCElement1 == null)
+                    if (RDCElement1==null)
                     {
                         Console.WriteLine("RDCElement1 is null!!");
                     }
@@ -110,7 +110,7 @@ class Program
                     if (RDCElement1c==null)
                     {
                         Console.WriteLine("RDCElement1c is null!!");
-                    }                   
+                    }
                     var RDCElement1d = RDCElement1c.FirstOrDefault();
                     if (RDCElement1d==null)
                     {
@@ -128,6 +128,8 @@ class Program
                         clickFButton(RDCElement1, "Connect");
                         Thread.Sleep(2000);
                         clickFButton(RDCElement1, "Yes");
+                        Thread.Sleep(5000);
+                        clickOKButton(rdc.Key);
                     }
                     else
                     {
@@ -187,23 +189,47 @@ class Program
     }
 
     public static void clickFButton(AutomationElement rDCElement1, String y)
-    {                 
-            var element = rDCElement1.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                .Cast<AutomationElement>()
-                                .Where(x => x.Current.ClassName=="Button"&&
-                                x.Current.Name==y
-                                            ).FirstOrDefault();
-            if (element!=null)
+    {
+        var element = rDCElement1.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                            .Cast<AutomationElement>()
+                            .Where(x => x.Current.ClassName=="Button"&&
+                            x.Current.Name==y
+                                        ).FirstOrDefault();
+        if (element!=null)
+        {
+            InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
+            invokePattern?.Invoke();
+        }
+        else
+        {
+            Console.WriteLine("Cannot find button!!");
+        }
+    }
+
+    public static void clickOKButton(string key)
+    {
+        AutomationElement rootElement = AutomationElement.RootElement;
+        AutomationElementCollection winCollection2 = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
+        AutomationElement targetWin = null;
+        foreach (AutomationElement elementIter in winCollection2)
+        {
+            String elementName = elementIter.Current.Name;
+            //Console.WriteLine(elementName);
+            if (elementName.Contains(key))
             {
-                InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
-                invokePattern?.Invoke();
+                Console.WriteLine();
+                Console.WriteLine("Success find the opend rdc: "+key);
+                targetWin=elementIter;
+                break;
             }
             else
             {
-                Console.WriteLine("Cannot find button!!");
+                //Console.WriteLine("fail to find the opend rdc!!");
             }
         }
-    
+
+    }
+
 
     //read config from notepad
     public static Dictionary<string, string> getConfig()
