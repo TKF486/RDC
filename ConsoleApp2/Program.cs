@@ -2,217 +2,230 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Automation;
-using System.Diagnostics;
+using System.Windows.Forms;
 using System.Threading;
-using System.Threading.Tasks;
 using System.IO;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
-namespace Test
+class Program
 {
-    class progam
+    public static Dictionary<string, string> dictionary;
+
+    // Find Window 
+    [DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
+    static extern IntPtr FindWindowByCaption(IntPtr ZeroOnly, string lpWindowName);
+
+    // Activate an application window.
+    [DllImport("USER32.DLL")]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {   
-                Semaphore gate = new Semaphore(2,2);
-                Semaphore writeGate = new Semaphore(1,1);
-                
-                Dictionary<string, string> dictionary = getConfig();
-                //continue loop through the process every 5s
-                while (true)
+        Logger("Program Start");
+        dictionary=getConfig();
+        while (true)
+        {
+            GetRDCWindows(dictionary);
+            //set the timer for the program to rerun after a specific time
+            Thread.Sleep(3000);
+            
+        }
+    }
+
+    //get RDC windows
+    public static void GetRDCWindows(Dictionary<string, string> dictionary)
+    {
+        try
+        {
+            foreach (KeyValuePair<string, string> rdc in dictionary)
+            {
+                String windowsName = "Remote Desktop Connection";
+                AutomationElement rootElement = AutomationElement.RootElement;
+                AutomationElementCollection winCollection = rootElement.FindAll(TreeScope.Children, Condition.TrueCondition);
+
+                int counter = 0;
+                foreach (AutomationElement elementIter in winCollection)
                 {
-                    //program alive counter, check if the program is open
-                    //int counter = 0;
-                    //get all processes
-                    Process[] processlist = Process.GetProcesses();
-
-                
-                Parallel.ForEach(dictionary, rdc =>
+                    String elementName = elementIter.Current.Name;
+                    if (elementName.Contains(rdc.Key))
+                    {
+                        counter++;
+                        break;
+                    }
+                }
+                if (counter==1)
                 {
-
-                        //gate.WaitOne();
-         
-                        Console.WriteLine("Checking for:{0} ...", rdc.Key);
-                        int counter = 0;
-                        foreach (Process process in processlist)
-
+                    //RDC already exists
+                }
+                else
+                {
+                    Thread.Sleep(2000);
+                    //open new rdc window
+                    Process.Start("mstsc.exe");                    
+                    Thread.Sleep(5000);
+                    //take the desktop as root
+                    AutomationElement rootElement2 = AutomationElement.RootElement;
+                    //find all window in desktop
+                    AutomationElementCollection winCollection2 = rootElement2.FindAll(TreeScope.Children, Condition.TrueCondition);
+                    AutomationElement mstscWin = null;
+                    foreach (AutomationElement elementIter2 in winCollection2)
+                    {
+                        String elementName = elementIter2.Current.Name;
+                        if (elementName.Contains(windowsName))
                         {
-                           
-                            if (!String.IsNullOrEmpty(process.MainWindowTitle))
-                            {
-                                //Console.WriteLine("ID: {0} = Name: {1}", process.Id, process.MainWindowTitle);
-
-                                if (process.MainWindowTitle == rdc.Key)
-                                {
-                                    counter++;
-                                    //Console.WriteLine("Window:{0} is not opened!!", rdc.Key);  
-                                }
-                                else
-                                {
-                                    //Console.WriteLine("no found!!");
-                                }
-
-
-
-                                //check if RDC is opened
-
-
-                            }
-
+                            mstscWin=elementIter2;
+                            break;
                         }
+                    }
+                    var RDC_Win = mstscWin;
+                    //locate the edit box in rdc
+                    var RDC_EditBox = RDC_Win.FindAll(TreeScope.Subtree, Condition.TrueCondition).Cast<AutomationElement>().Where(x => (x.Current.AutomationId=="5012")).FirstOrDefault();
+                    Thread.Sleep(5000);
 
-                        if (counter == 1)
-                        {
-                            Console.WriteLine("Window:{0} is already opened!!", rdc.Key);
-                        }
-                        else
-                        {
-                            Thread.Sleep(2000);
-                            Console.WriteLine("Window:{0} is not opened!!", rdc.Key);
-                            startProgram();
-                            Thread.Sleep(2000);
-                        gate.WaitOne();
-
-                        writeLine(rdc.Value, ref writeGate, ref gate, rdc.Key);
-                            Thread.Sleep(5000);
-                            clickFButton("Connect", rdc.Key);
-                            Thread.Sleep(2000);
-                            clickFButton("Yes", rdc.Key);
-                        }
-
-                        gate.Release();
-                    Thread.Sleep(3000);
-                });
-
-
-
-                //sleep 5s
-                Thread.Sleep(3000);
+                    if (RDC_EditBox!=null)
+                    {
+                        EnterValue(RDC_EditBox, rdc.Value, rdc.Key);
+                        clickButton(RDC_Win, "Connect");
+                        Thread.Sleep(2000);
+                        clickButton(RDC_Win, "Yes");
+                        Thread.Sleep(5000);
+                        clickOKButton(rdc.Key);
+                    }
+                    Thread.Sleep(2000);
 
                 }
-
-                /////////////////////////////////
+                Thread.Sleep(5000);
             }
-
-
-
-
-
-
-            //start the RDC prgram
-            public static void startProgram()
+        }
+        catch (Exception ex)
         {
-            Process firstApp = new Process();
+        }
+    }
 
-            try
+    //enter ip address into rdc
+    private static void EnterValue(AutomationElement element, string rdcIP, string rdckey)
+    {
+        try
+        {
+            AutomationElement TextboxElement = element.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                            .Cast<AutomationElement>()
+                                            .Where(x => x.Current.ClassName=="Edit")
+                                            .FirstOrDefault();
+            if (TextboxElement!=null)
             {
-                firstApp.StartInfo.FileName = "mstsc.exe";
-                firstApp.Start();
-                //Console.WriteLine("ID: {0} = Name: {1}", firstApp.Id, firstApp.ProcessName);
-                //firstApp.WaitForExit();
-
-
+                if (TextboxElement.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                {
+                    ((ValuePattern)pattern).SetValue(rdcIP);
+                    //Console.WriteLine("Window:{0} write successful!!", rdckey);
+                }
+                else
+                {
+                    TextboxElement.SetFocus();
+                }
             }
-            catch (Exception ex)
+        }
+        catch (ElementNotAvailableException e)
+        {
+        }
+    }
+
+    //Click all the buttons that is invlove to open rdc
+    public static void clickButton(AutomationElement rDCElement1, String y)
+    {
+        try
+        {
+            var element = rDCElement1.FindAll(TreeScope.Subtree, Condition.TrueCondition)
+                                     .Cast<AutomationElement>()
+                                     .Where(x => x.Current.ClassName=="Button"&&
+                                     x.Current.Name==y
+                                                 ).FirstOrDefault();
+            if (element!=null)
             {
-                Console.WriteLine(ex.ToString());
+                InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
+                invokePattern?.Invoke();
+            }
+            else
+            {
+                //button cannot be detected
+            }
+        }
+        catch (ElementNotAvailableException e)
+        {
+        }
+    }
+
+    //pressing the ok button after rdc is opend
+    public static void clickOKButton(string key)
+    {
+        try
+        {
+            var hWnd = FindWindowByCaption(IntPtr.Zero, key);
+            if (hWnd==IntPtr.Zero)
+            {
+                //If cannot find window
+            }
+            else
+            {
+                //Sucess find open rdc
+                SetForegroundWindow(hWnd);
+                SendKeys.SendWait("{ENTER}");
             }
         }
 
-        public static void writeLine(String rdcIP, ref Semaphore writeGate, ref Semaphore gate, string key)
+        catch (Exception e)
         {
-            try
-            {
-                //gate.WaitOne();
-                writeGate.WaitOne();
-                //Console.WriteLine(writeGate);
-               
-                var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
-                if (notepad != null)
-                {
-                    var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
-                    var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName == "Edit"
-                                                    ).FirstOrDefault();
-                    if (element != null)
-                    {
-                        if (element.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                        {
-                            ((ValuePattern)pattern).SetValue(rdcIP);
-                            Console.WriteLine("Program{0}: WriteLine succeed!!", key);
-                            writeGate.Release();
-                        }
-                        else
-                        {
-                            Console.WriteLine("Cannot found!!");
-                        }
-                    }
-                }
-            }
-
-            catch (Exception ex)
-            {
-                Console.WriteLine("Program{0}: WriteLine fail", key);
-            }
         }
 
-        public static void clickFButton(String y, string key)
+    }
+
+    //read config from notepad
+    public static Dictionary<string, string> getConfig()
+    {
+        Dictionary<string, string> dictionary = new Dictionary<string, string>();
+        try
         {
-            try
-            {
-                var notepad = System.Diagnostics.Process.GetProcessesByName("mstsc").FirstOrDefault();
-                if (notepad != null)
-                {
-                    var root = AutomationElement.FromHandle(notepad.MainWindowHandle);
-                    var element = root.FindAll(TreeScope.Subtree, Condition.TrueCondition)
-                                        .Cast<AutomationElement>()
-                                        .Where(x => x.Current.ClassName == "Button" &&
-                                        x.Current.Name == y
-                                                    ).FirstOrDefault();
-                    if (element != null)
-                    {
-                        InvokePattern invokePattern = element.GetCurrentPattern(InvokePattern.Pattern) as InvokePattern;
-                        invokePattern?.Invoke();
-                        Console.WriteLine("Program{0}: Press Button succeed!!", key);
-                    }
-                    else
-                    {
-
-                    }
-
-                }
-            }
-
-            catch (Exception ex)
-            {
-                Console.WriteLine("Program{0}: Press button fail", key);
-            }
-
-
-
-
-
-        }
-
-  
-
-        public static Dictionary<string, string> getConfig()
-        {
-            Dictionary<string, string> dictionary = new Dictionary<string, string>();
             using (var reader = new StreamReader("windowList.txt"))
             {
                 while (!reader.EndOfStream)
                 {
                     var line = reader.ReadLine();
-                    if (line == null) continue;
+                    if (line==null) continue;
                     var values = line.Split(';');
                     dictionary.Add(values[0], values[1]);
                 }
             }
-
-            return dictionary;
-
         }
+        catch (Exception e)
+        {
+        }
+        return dictionary;
+    }
 
+    public static void VerifyDir(string path)
+    {
+        try
+        {
+            DirectoryInfo dir = new DirectoryInfo(path);
+            if (!dir.Exists)
+            {
+                dir.Create();
+            }
+        }
+        catch { }
+    }
+
+    public static void Logger(string lines)
+    {
+        string path = "C:/Log/";
+        VerifyDir(path);
+        string fileName = DateTime.Now.Day.ToString()+DateTime.Now.Month.ToString()+DateTime.Now.Year.ToString()+"_Logs.txt";
+        try
+        {
+            System.IO.StreamWriter file = new System.IO.StreamWriter(path+fileName, true);
+            file.WriteLine(DateTime.Now.ToString()+": "+lines);
+            file.Close();
+        }
+        catch (Exception) { }
     }
 }
