@@ -7,11 +7,13 @@ using System.Threading;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Timer = System.Timers.Timer;
+using System.Timers;
 
 class Program
 {
     public static Dictionary<string, string> dictionary;
-
+    
     // Find Window 
     [DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
     static extern IntPtr FindWindowByCaption(IntPtr ZeroOnly, string lpWindowName);
@@ -22,14 +24,28 @@ class Program
 
     static void Main(string[] args)
     {
-        Logger("RDC program start");
         dictionary=getConfig();
-        while (true)
+        Logger("RDC program start");      
+        Timer aTimer = new Timer();
+        // Hook up the Elapsed event for the timer. 
+        aTimer.Elapsed+=new ElapsedEventHandler(OnTimedEvent);
+        aTimer.Interval=60000; //set the timer for looping
+        aTimer.Enabled=true;
+        Console.WriteLine("Press \'q\' to quit the sample.");
+        while (Console.Read()!='q');
+        aTimer.Dispose();
+    }
+
+    //program looping
+    public static void OnTimedEvent(object o, ElapsedEventArgs e)
+    {
+        try
         {
             GetRDCWindows(dictionary);
-            //set the timer for the program to rerun after a specific time
-            Thread.Sleep(3000);
-            
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine(ex);
         }
     }
 
@@ -95,9 +111,7 @@ class Program
                         clickOKButton(rdc.Key);               
                     }
                     Thread.Sleep(2000);
-
                 }
-                Thread.Sleep(5000);
             }
         }
         catch (Exception ex)
