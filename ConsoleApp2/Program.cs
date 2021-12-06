@@ -22,7 +22,7 @@ class Program
 
     static void Main(string[] args)
     {
-        Logger("Program Start");
+        Logger("RDC program start");
         dictionary=getConfig();
         while (true)
         {
@@ -60,6 +60,7 @@ class Program
                 }
                 else
                 {
+                    Logger("Start opening RDC: " + rdc.Value);
                     Thread.Sleep(2000);
                     //open new rdc window
                     Process.Start("mstsc.exe");                    
@@ -84,13 +85,14 @@ class Program
                     Thread.Sleep(5000);
 
                     if (RDC_EditBox!=null)
-                    {
-                        EnterValue(RDC_EditBox, rdc.Value, rdc.Key);
-                        clickButton(RDC_Win, "Connect");
+                    {                   
                         Thread.Sleep(2000);
-                        clickButton(RDC_Win, "Yes");
+                        EnterValue(RDC_EditBox, rdc.Value);
+                        clickButton(RDC_Win, "Connect", rdc.Value);
+                        Thread.Sleep(2000);
+                        clickButton(RDC_Win, "Yes", rdc.Value);
                         Thread.Sleep(5000);
-                        clickOKButton(rdc.Key);
+                        clickOKButton(rdc.Key);               
                     }
                     Thread.Sleep(2000);
 
@@ -104,10 +106,10 @@ class Program
     }
 
     //enter ip address into rdc
-    private static void EnterValue(AutomationElement element, string rdcIP, string rdckey)
+    private static void EnterValue(AutomationElement element, string rdcIP)
     {
         try
-        {
+        {          
             AutomationElement TextboxElement = element.FindAll(TreeScope.Subtree, Condition.TrueCondition)
                                             .Cast<AutomationElement>()
                                             .Where(x => x.Current.ClassName=="Edit")
@@ -115,7 +117,7 @@ class Program
             if (TextboxElement!=null)
             {
                 if (TextboxElement.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                {
+                {               
                     ((ValuePattern)pattern).SetValue(rdcIP);
                     //Console.WriteLine("Window:{0} write successful!!", rdckey);
                 }
@@ -125,13 +127,14 @@ class Program
                 }
             }
         }
-        catch (ElementNotAvailableException e)
+        catch 
         {
+            Logger("RDC: "+rdcIP+" fail to write IP into rdc!");
         }
     }
 
     //Click all the buttons that is invlove to open rdc
-    public static void clickButton(AutomationElement rDCElement1, String y)
+    public static void clickButton(AutomationElement rDCElement1, String y, string value)
     {
         try
         {
@@ -150,8 +153,9 @@ class Program
                 //button cannot be detected
             }
         }
-        catch (ElementNotAvailableException e)
+        catch 
         {
+            Logger("RDC: "+value+" fail to click " + y + " button in rdc!");
         }
     }
 
@@ -170,11 +174,14 @@ class Program
                 //Sucess find open rdc
                 SetForegroundWindow(hWnd);
                 SendKeys.SendWait("{ENTER}");
+                Logger("RDC: "+key+" open successfully!");
+
             }
         }
 
-        catch (Exception e)
+        catch 
         {
+            Logger("RDC: "+key+" fail to press ok button in opened rdc!");
         }
 
     }
@@ -196,8 +203,9 @@ class Program
                 }
             }
         }
-        catch (Exception e)
+        catch
         {
+            Logger("RDC fail to read config file!");
         }
         return dictionary;
     }
@@ -212,7 +220,9 @@ class Program
                 dir.Create();
             }
         }
-        catch { }
+        catch {
+            
+        }
     }
 
     public static void Logger(string lines)
