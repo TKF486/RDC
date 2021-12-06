@@ -42,10 +42,11 @@ class Program
         try
         {
             GetRDCWindows(dictionary);
+            Logger("Cycle completed!");
         }
         catch(Exception ex)
         {
-            Console.WriteLine(ex);
+            Logger("Fail to run timer!");
         }
     }
 
@@ -116,6 +117,7 @@ class Program
         }
         catch (Exception ex)
         {
+            Logger("Fail to get RDC Window!");
         }
     }
 
