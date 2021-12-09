@@ -247,6 +247,7 @@ class Program
 
     public static void Logger(string lines)
     {
+        //Log Writing path can be dynamically set at app.config file inside AppSettings by changing the key value
         string path = System.Configuration.ConfigurationManager.AppSettings["log_path"];
         VerifyDir(path);
         string fileName = DateTime.Now.Year.ToString()+DateTime.Now.Month.ToString()+DateTime.Now.Day.ToString()+"_Logs.txt";
