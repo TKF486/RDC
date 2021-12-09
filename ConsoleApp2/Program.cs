@@ -42,11 +42,11 @@ class Program
         try
         {
             GetRDCWindows(dictionary);
-            Logger("Cycle completed!");
+            Logger("Cycle - Completed!");
         }
         catch(Exception ex)
         {
-            Logger("Fail to run timer!");
+            Logger("Run timer - Failed!");
         }
     }
 
@@ -117,7 +117,7 @@ class Program
         }
         catch (Exception ex)
         {
-            Logger("Fail to get RDC Window!");
+            Logger("Get RDC Window - Failed!");
         }
     }
 
@@ -171,7 +171,7 @@ class Program
         }
         catch 
         {
-            Logger("RDC: "+value+" fail to click " + y + " button in rdc!");
+            Logger("RDC: "+value+" click " + y + " button in rdc - Failed!");
         }
     }
 
@@ -190,14 +190,14 @@ class Program
                 //Sucess find open rdc
                 SetForegroundWindow(hWnd);
                 SendKeys.SendWait("{ENTER}");
-                Logger("RDC: "+key+" open successfully!");
+                Logger("RDC: "+key+" open - Success!");
 
             }
         }
 
         catch 
         {
-            Logger("RDC: "+key+" fail to press ok button in opened rdc!");
+            Logger("RDC: "+key+" press ok button in opened rdc - Failed!");
         }
 
     }
@@ -209,19 +209,23 @@ class Program
         try
         {
             using (var reader = new StreamReader("windowList.txt"))
-            {
+            {              
+                Logger("List of all RDC Windows to be checked on: ");
+                int counter = 1;
                 while (!reader.EndOfStream)
                 {
                     var line = reader.ReadLine();
                     if (line==null) continue;
                     var values = line.Split(';');
-                    dictionary.Add(values[0], values[1]);
+                    dictionary.Add(values[0], values[1]);                   
+                    Logger("Window " +counter + ": " + values[0]);
+                    counter++;
                 }
             }
         }
         catch
         {
-            Logger("RDC fail to read config file!");
+            Logger("RDC read config file- Failed!");
         }
         return dictionary;
     }
@@ -243,13 +247,13 @@ class Program
 
     public static void Logger(string lines)
     {
-        string path = "C:/Log/";
+        string path = System.Configuration.ConfigurationManager.AppSettings["log_path"];
         VerifyDir(path);
-        string fileName = DateTime.Now.Day.ToString()+DateTime.Now.Month.ToString()+DateTime.Now.Year.ToString()+"_Logs.txt";
+        string fileName = DateTime.Now.Year.ToString()+DateTime.Now.Month.ToString()+DateTime.Now.Day.ToString()+"_Logs.txt";
         try
         {
             System.IO.StreamWriter file = new System.IO.StreamWriter(path+fileName, true);
-            file.WriteLine(DateTime.Now.ToString()+": "+lines);
+            file.WriteLine("("+DateTime.Now.ToString()+") "+lines);
             file.Close();
         }
         catch (Exception) { }
